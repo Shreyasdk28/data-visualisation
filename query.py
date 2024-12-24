@@ -1,78 +1,36 @@
 import mysql.connector
+import streamlit as st
+import pandas as pd
 
-# Database connection setup
+
+# Database connection
 try:
     conn = mysql.connector.connect(
         host="localhost",
-        port="3306",
         user="root",
-        password="shreyas",
-        db="streamlit_project"
+        password="",
+        database="mydb"
     )
-    print("Connection successful!")
-    
-    # Create a cursor to interact with the database
-    cursor = conn.cursor()
-    print("Cursor created.")
-    
-    # Execute the SQL query
-    cursor.execute("SELECT * FROM insurance")
-    print("Query executed.")
-    
-    # Fetch the data
-    result = cursor.fetchall()
-    print("Data fetched:", result)
-
+    # st.success("Database connected!")
 except mysql.connector.Error as e:
-    print(f"Connection failed: {e}")
+    st.error(f"Database connection failed: {e}")
+    st.stop()  # Stop execution if the database connection fails
 
-finally:
-    if conn.is_connected():
-        conn.close()
-        print("Connection closed.")
-
-
-# conn=mysql.connector.connect(
-#     host="localhost",
-#     port="3306",
-#     user="root",
-#     password="shreyas",
-#     db="streamlit_project"
-# )
-# c=conn.cursor()
-
-#fetch
-
-# def view_all_data():
-#     c.execute("select * from insurance order by id asc")
-#     data=c.fetchall()
-#     return data
-
-
-    
-    
-
-# conn=mysql.connector.connect(
-#     host="localhost",
-#     port="3306",
-#     user="root",
-#     password="shreyas",
-#     db="streamlit_project"
-# )
-# c=conn.cursor()
-
-#fetch
-
-# def view_all_data():
-#     c.execute("select * from insurance order by id asc")
-#     data=c.fetchall()
-#     return data
-
-
+# Fetch data function
 def view_all_data():
-    # Example function implementation
-    return [
-        (1, "2024-12-31", "New York", "NY", "Northeast", 1000000, "Concrete", "Retail", True, False, "A", 101),
-        (2, "2025-01-15", "Los Angeles", "CA", "West", 2000000, "Wood", "Residential", False, True, "B", 102),
-        # Add more rows as needed
-    ]
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM insurance ORDER BY id ASC")
+        result = cursor.fetchall()
+        return result
+    except mysql.connector.Error as e:
+        st.error(f"Failed to fetch data: {e}")
+        return []
+
+  # This will print the result of the SQL query
+
+view_all_data()
+
+
+
+
