@@ -1,86 +1,63 @@
 import streamlit as st
+# Ensure this is at the very top of your script
+if "page_config_set" not in st.session_state:
+    st.set_page_config(page_title="Dashboard", page_icon="🌍", layout="wide")
+    st.session_state.page_config_set = True  # Prevent multiple calls to set_page_config
+
 import pandas as pd
+import matplotlib.pyplot as plt
 import plotly.express as px
 from streamlit_option_menu import option_menu
 from numerize.numerize import numerize
 import time
 from streamlit_extras.metric_cards import style_metric_cards
-theme_plotly = None 
-# from query import view_all_data
-import plotly.graph_objs as go
+from query import view_all_data  # Ensure this function is correctly implemented
+import plotly.graph_objs as go 
 
-st.set_page_config(page_title="Dashboard",page_icon="🌍",layout="wide")
+# Page header
 st.header("ANALYTICAL PROCESSING, KPI, TRENDS & PREDICTIONS")
-with open('style.css')as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html = True)
-# # Database connection
-# try:
-#     conn = mysql.connector.connect(
-#         host="localhost",
-#         user="root",
-#         password="",
-#         database="mydb"
-#     )
-#     # st.success("Database connected!")
-# except mysql.connector.Error as e:
-#     st.error(f"Database connection failed: {e}")
-#     st.stop()  # Stop execution if the database connection fails
 
-# # Fetch data function
-# def view_all_data():
-#     try:
-#         cursor = conn.cursor()
-#         cursor.execute("SELECT * FROM insurance ORDER BY id ASC")
-#         result = cursor.fetchall()
-#         return result
-#     except mysql.connector.Error as e:
-#         st.error(f"Failed to fetch data: {e}")
-#         return []
+# Load external CSS
+with open('style.css') as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Fetch and display data
-# with st.spinner("Fetching data from the database..."):
-#     result =pd.read_csv("data/data.csv")
-#     if result:
-#         df = pd.DataFrame(result, columns=[
-#             "Policy", "Expiry", "Location", "State", "Region",
-#             "Investment", "Construction", "BusinessType",
-#             "Earthquake", "Flood", "Rating"
-#         ])
-#         #st.dataframe(df)
-#     else:
-#         st.warning("No data found!")
+# Fetch data
+try:
+    df = view_all_data()  # Ensure view_all_data returns a DataFrame
+except Exception as e:
+    st.error(f"Error fetching data: {e}")
+    st.stop()
 
-# # Sidebar filters
-# if not result:
-#     st.stop()  # Stop further execution if no data is retrieved
-df=pd.read_csv("data/data.csv")
+# Sidebar setup
 st.sidebar.image("data/logo1.png", caption="Online Analytics")
 st.sidebar.header("Please filter the data")
 region = st.sidebar.multiselect(
-"Select Region", options=df["Region"].unique(), default=df["Region"].unique()
+    "Select Region", options=df["Region"].unique(), default=df["Region"].unique()
 )
-
 location = st.sidebar.multiselect(
     "Select Location", options=df["Location"].unique(), default=df["Location"].unique()
 )
-
 construction = st.sidebar.multiselect(
     "Select Construction", options=df["Construction"].unique(), default=df["Construction"].unique()
 )
-
-df_selection=df.query(
+df_selection = df.query(
     "Region == @region & Location == @location & Construction == @construction"
 )
 
-#st.dataframe(df_selection)
-
+# Function to display the home page
 def Home():
+    # Data preview
     with st.expander("VIEW EXCEL DATASET"):
-        showData=st.multiselect('Filter: ',df_selection.columns,default=["Policy","Expiry","Location","State","Region","Investment","Construction","BusinessType","Earthquake","Flood","Rating"])
-        st.dataframe(df_selection[showData],use_container_width=True)
-    #compute top analytics 
-    # Total investment (no need for empty check as sum always returns a number)
-    # Total Investment
+        show_data = st.multiselect(
+            "Filter: ", df_selection.columns,
+            default=[
+                "Policy", "Expiry", "Location", "State", "Region",
+                "Investment", "Construction", "BusinessType", "Earthquake", "Flood", "Rating"
+            ]
+        )
+        st.dataframe(df_selection[show_data], use_container_width=True)
+
+    # Calculate analytics
     total_investment = df_selection["Investment"].sum() 
     total_investment = int(total_investment)
 
@@ -127,82 +104,89 @@ def Home():
         st.info('Ratings',icon="💰")
         st.metric(label='Rating',value=numerize(rating),help=f""" Total Rating: {rating }""")
     style_metric_cards(background_color="#FFFFFF",border_left_color="#686664",border_color="#000000",box_shadow="#F71938")
-    
+
+
+
+    # Distribution chart
     with st.expander("DISTRIBUTIONS BY FREQUENCY"):
-      df.hist(figsize=(16,8),color='#898784', zorder=2, rwidth=0.9,legend = ['Investment']);
-      st.pyplot()
+        # Create a figure and axis object
+        fig, ax = plt.subplots(figsize=(16, 8))  # Specify the size of the plot
+        
+        # Plot the histogram
+        df.hist(ax=ax, color='#898784', zorder=2, rwidth=0.9, legend=['Investment'])
+        
+        # Use st.pyplot with the figure and axis
+        st.pyplot(fig)  # Pass the created figure
 
-# Home()
-
-#graphs
-
+# Function to display graphs
 def graphs():
-    total_investment = int(df_selection["Investment"].sum())
-    average_rating=int(round(df_selection["Rating"].mean(),2))
-    #simple bar graph
-    investment_by_business_type = (df_selection.groupby("BusinessType").count()[["Investment"]].sort_values(by="Investment"))
-    fig_investment=px.bar(
+    # Grouping for bar graph
+    investment_by_business_type = df_selection.groupby("BusinessType")["Investment"].sum().reset_index()
+    fig_investment = px.bar(
         investment_by_business_type,
         x="Investment",
-        y=investment_by_business_type.index,
+        y="BusinessType",
         orientation="h",
         title="<b>Investment by Business Type</b>",
-        color_discrete_sequence=["#0083B8"]*len(investment_by_business_type),
-        template="plotly_white",
-        )
+        color_discrete_sequence=["#0083B8"] * len(investment_by_business_type),
+        template="plotly_white"
+    )
     fig_investment.update_layout(
-     plot_bgcolor="rgba(0,0,0,0)",
-     font=dict(color="black"),
-     yaxis=dict(showgrid=True, gridcolor='#cecdcd'),  # Show y-axis grid and set its color  
-     paper_bgcolor='rgba(0, 0, 0, 0)',  # Set paper background color to transparent
-     xaxis=dict(showgrid=True, gridcolor='#cecdcd'),  # Show x-axis grid and set its color
-     )
-    
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="black"),
+        yaxis=dict(showgrid=True, gridcolor="#cecdcd"),
+        paper_bgcolor="rgba(0, 0, 0, 0)",
+        xaxis=dict(showgrid=True, gridcolor="#cecdcd"),
+    )
 
-    #simple line grpah
-    investment_state= df_selection.groupby("State").count()[["Investment"]]
-    fig_state=px.line(
+    # Line graph
+    investment_state = df_selection.groupby("State")["Investment"].sum().reset_index()
+    fig_state = px.line(
         investment_state,
-        x=investment_state.index,
+        x="State",
         y="Investment",
-        orientation="v",
         title="<b>Investment by State</b>",
-        color_discrete_sequence=["#0083b8"]*len(investment_state),
-        template="plotly_white",
-        )
+        color_discrete_sequence=["#0083b8"] * len(investment_state),
+        template="plotly_white"
+    )
     fig_state.update_layout(
-        xaxis=(dict(tickmode="linear")),
-        plot_bgcolor='rgba(0,0,0,0)',
-        yaxis=(dict(showgrid=False)))
-    left,right,center=st.columns(3)
-    left.plotly_chart(fig_state,use_container_width=True)
-    right.plotly_chart(fig_investment,use_container_width=True)
-    with center:
-      #pie chart
-      fig = px.pie(df_selection, values='Rating', names='State', title='RATINGS BY REGIONS')
-      fig.update_layout(legend_title="Regions", legend_y=0.9)
-      fig.update_traces(textinfo='percent+label', textposition='inside')
-      st.plotly_chart(fig, use_container_width=True, theme=theme_plotly)
+        xaxis=dict(tickmode="linear"),
+        plot_bgcolor="rgba(0,0,0,0)",
+        yaxis=dict(showgrid=False),
+    )
 
+    # Pie chart
+    fig_pie = px.pie(df_selection, values="Rating", names="State", title="RATINGS BY REGIONS")
+    fig_pie.update_layout(legend_title="Regions", legend_y=0.9)
+    fig_pie.update_traces(textinfo="percent+label", textposition="inside")
+
+    # Display graphs
+    left, right, center = st.columns(3)
+    left.plotly_chart(fig_state, use_container_width=True)
+    right.plotly_chart(fig_investment, use_container_width=True)
+    center.plotly_chart(fig_pie, use_container_width=True)
+
+# Function for the progress bar
 def progressbar():
-    st.markdown("""<style>.stProgress > div > div > div > div { background-image: linear-gradient(to right, #99ff99 , #FFFF00)}</style>""",unsafe_allow_html=True,)
-    target=3000000000
-    current=df_selection["Investment"].sum()
-    percent = round((current/target)*100)
+    st.markdown(
+        """<style>.stProgress > div > div > div > div { background-image: linear-gradient(to right, #99ff99 , #FFFF00)}</style>""",
+        unsafe_allow_html=True,
+    )
+    target = 3000000000
+    current = df_selection["Investment"].sum()
+    percent = round((current / target) * 100)
     mybar = st.progress(0)
-    if percent>100:
+
+    if percent > 100:
         st.subheader("Target Achieved")
     else:
-        st.write("you hvae ", percent,"% ", "of ", numerize(target), "$")   
+        st.write(f"You have achieved {percent}% of ₹{numerize(target)}")
         for percent_complete in range(percent):
             time.sleep(0.08)
-            mybar.progress(percent_complete+1, text=f"{percent_complete+1}%") 
-    
-# progressbar()
-import streamlit as st
-from streamlit_option_menu import option_menu
+            mybar.progress(percent_complete + 1, text=f"{percent_complete + 1}%")
 
-def sidebar(): 
+# Sidebar navigation
+def sidebar():
     with st.sidebar:
         selected = option_menu(
             menu_title="Main Menu",
@@ -211,43 +195,42 @@ def sidebar():
             menu_icon="cast",
             default_index=0
         )
-    
+
     if selected == "Home":
-        st.subheader(f"Page: {selected}")
         Home()
         graphs()
-    
-    if selected == "Progress":
-        st.subheader(f"Page: {selected}")
+    elif selected == "Progress":
         progressbar()
         graphs()
 
 sidebar()
 
-st.subheader('PICK FEATURES TO EXPLORE DISTRIBUTIONS TRENDS BY QUARTILES',)
-feature_x = st.selectbox('Select feature for x Qualitative data', df_selection.select_dtypes("object").columns)
-feature_y = st.selectbox('Select feature for y Quantitative Data', df_selection.select_dtypes("number").columns)
-fig2 = go.Figure(
-    data=[go.Box(x=df['BusinessType'], y=df[feature_y])],
+# Additional visualizations
+st.subheader("PICK FEATURES TO EXPLORE DISTRIBUTIONS & TRENDS BY QUARTILES")
+feature_x = st.selectbox("Select feature for X (Qualitative)", df_selection.select_dtypes("object").columns)
+feature_y = st.selectbox("Select feature for Y (Quantitative)", df_selection.select_dtypes("number").columns)
+
+fig_quartiles = go.Figure(
+    data=[go.Box(x=df_selection[feature_x], y=df_selection[feature_y])],
     layout=go.Layout(
-        title=go.layout.Title(text="BUSINESS TYPE BY QUARTILES OF INVESTMENT"),
-        plot_bgcolor='rgba(0, 0, 0, 0)',  # Set plot background color to transparent
-        paper_bgcolor='rgba(0, 0, 0, 0)',  # Set paper background color to transparent
-        xaxis=dict(showgrid=True, gridcolor='#cecdcd'),  # Show x-axis grid and set its color
-        yaxis=dict(showgrid=True, gridcolor='#cecdcd'),  # Show y-axis grid and set its color
-        font=dict(color='#cecdcd'),  # Set text color to black
+        title="Business Type by Quartiles of Investment",
+        plot_bgcolor="rgba(0, 0, 0, 0)",
+        paper_bgcolor="rgba(0, 0, 0, 0)",
+        xaxis=dict(showgrid=True, gridcolor="#cecdcd"),
+        yaxis=dict(showgrid=True, gridcolor="#cecdcd"),
+        font=dict(color="#cecdcd"),
     )
 )
+st.plotly_chart(fig_quartiles, use_container_width=True)
 
-#display it
-st.plotly_chart(fig2, use_container_width=True)
-#theme
-
-hide_st_style=""" 
-
-<style>
-    #MainMenu {visibility:hidden;}
-    footer {visibility:hidden;}
-    header {visibility:hidden;}
-</style>
-"""
+# Hide default Streamlit UI
+st.markdown(
+    """
+    <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)

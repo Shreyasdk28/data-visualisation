@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from streamlit_extras.metric_cards import style_metric_cards
+from query import view_all_data
 
 st.set_page_config(page_title="Dashboard", page_icon="📈", layout="wide")  
 st.subheader("PYTHON QUERY OPERATIONS | FETCH DATA FROM DATASET BY ADVANCED QUERY")
@@ -16,8 +17,14 @@ with open('style.css')as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html = True)
     
 # Load the Excel file into a DataFrame
-file_path = 'python_query.xlsx'  
-df = pd.read_excel(file_path)
+# file_path = 'python_query.xlsx'  
+# df = pd.read_excel(file_path)
+
+try:
+    df = view_all_data()  # Ensure view_all_data returns a DataFrame
+except Exception as e:
+    st.error(f"Error fetching data: {e}")
+    st.stop()
 
 with st.expander("🔷 **View Original Dataset | Excel file**"):
  st.dataframe(df,use_container_width=True)
@@ -52,34 +59,40 @@ with st.expander("**QUERY 4:** select count **BusinessType**  by frequency and p
  fig4.update_yaxes(showgrid=True)
  st.plotly_chart(fig4,use_container_width=True)
 
-# Query 5
-with st.expander("**QUERY 5:** select minimal **Investment** and minimal **Rating** where **State** is Mwanza and Expiry date is range from 2-jan-21 to 16-jan-21"):
- query_5 = df[(df['State'] == 'Mwanza') & (df['Expiry'] >= '2021-01-02') & (df['Expiry'] <= '2021-01-16')][['Investment', 'Rating']].agg('min')
- st.success("Minimum **Investment** and **Rating** where **State** is **Mwanza** and date is in the specified range:")
- st.dataframe(query_5)
+# Query 5: Minimum Investment and Rating in Uttar Pradesh within a date range
+with st.expander("**QUERY 5:** Select minimal **Investment** and minimal **Rating** where **State** is Uttar Pradesh and Expiry date is in the range 2-Jan-21 to 16-Jan-21"):
+    query_5 = df[(df['State'] == 'Uttar Pradesh') & 
+                 (df['Expiry'] >= '2021-01-02') & 
+                 (df['Expiry'] <= '2021-01-16')][['Investment', 'Rating']].min()
+    st.success("Minimum **Investment** and **Rating** where **State** is **Uttar Pradesh** and date is in the specified range:")
+    st.dataframe(query_5)
 
-# Query 6
-with st.expander("**QUERY 6:** select count **Location** where **Location** ='Dodoma'"):
- count_location = df[df['State'] == "Dodoma"]['Location'].count()
- st.info(f"## {count_location}")
+# Query 6: Count of Location in Uttar Pradesh
+with st.expander("**QUERY 6:** Select count of **Location** where **State** is 'Uttar Pradesh'"):
+    count_location = df[df['State'] == "Uttar Pradesh"]['Location'].count()
+    st.info(f"## {count_location}")
 
-# Query 7
-with st.expander("**QUERY 7:**  select count  **Location** and **Region** where **Location** ='Dodoma' and **Region**='East'"):
- count_location_region = df[(df['State'] == "Dodoma") & (df['Region'] == "East")]['Location'].count()
- st.info(f"## {count_location_region:,.3f}")
+# Query 7: Count of Location and Region in Karnataka and East
+with st.expander("**QUERY 7:** Select count of **Location** and **Region** where **State** is 'Karnataka' and **Region** is 'East'"):
+    count_location_region = df[(df['State'] == "Karnataka") & (df['Region'] == "East")]['Location'].count()
+    st.info(f"## {count_location_region:,}")
 
-# Query 8
-with st.expander("**QUERY 8:** select count **Location** and **Region** where **Location** ='Dodoma' and **Region**='East' and **Investment** is greater than 300000"):
- count_location_region_investment = df[(df['State'] == "Dodoma") & (df['Region'] == "East") & (df['Investment'] > 300000)]['Location'].count()
- st.info(f"## {count_location_region_investment:,.3f}")
+# Query 8: Count of Location and Region with Investment > 300,000 in Karnataka and East
+with st.expander("**QUERY 8:** Select count of **Location** and **Region** where **State** is 'Karnataka', **Region** is 'East', and **Investment** > 300,000"):
+    count_location_region_investment = df[(df['State'] == "Karnataka") & 
+                                          (df['Region'] == "East") & 
+                                          (df['Investment'] > 300000)]['Location'].count()
+    st.info(f"## {count_location_region_investment:,}")
 
-# Query 9
-with st.expander("**QUERY 9:** select average mean of **investment** where **State**='Dodoma' and **Location** is not  'Urban'"):
- avg_investment_dodoma_not_urban = df[(df['State'] == "Dodoma") & (df['Location'] != "Urban")]['Investment'].mean()
- st.info(f"## {avg_investment_dodoma_not_urban:,.3f} ")
+# Query 9: Average Investment in Karnataka where Location is not Urban
+with st.expander("**QUERY 9:** Select average **Investment** where **State** is 'Karnataka' and **Location** is not 'Urban'"):
+    avg_investment_dodoma_not_urban = df[(df['State'] == "Karnataka") & 
+                                         (df['Location'] != "Urban")]['Investment'].mean()
+    st.info(f"## ₹{avg_investment_dodoma_not_urban:,.2f}")
 
-
-# Query 10- Sum of investments in the date range at Dodoma
-with st.expander("**QUERY 10:** select summation of **investment** where **Expiry** is a date range from 2-jan-21 to 16-jan-21 and region is Dodoma"):
- sum_investment_date_range_dodoma = df[(df['Expiry'] >= '2021-01-02') & (df['Expiry'] <= '2021-01-16') & (df['State'] == 'Dodoma')]['Investment'].sum()
- st.info(f"## {sum_investment_date_range_dodoma:,.3f}")
+# Query 10: Sum of Investments in Uttar Pradesh within a date range
+with st.expander("**QUERY 10:** Select sum of **Investment** where **State** is Uttar Pradesh and **Expiry** is in the range 2-Jan-21 to 16-Jan-21"):
+    sum_investment_date_range = df[(df['Expiry'] >= '2021-01-02') & 
+                                   (df['Expiry'] <= '2021-01-16') & 
+                                   (df['State'] == 'Uttar Pradesh')]['Investment'].sum()
+    st.info(f"## ₹{sum_investment_date_range:,.2f}")
