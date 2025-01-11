@@ -28,7 +28,7 @@ except Exception as e:
 
 with st.expander("🔷 **View Original Dataset | Excel file**"):
  st.dataframe(df,use_container_width=True)
-
+df['Expiry'] = pd.to_datetime(df['Expiry'], errors='coerce')
 # TASK 1: Display results using Streamlit metrics cards horizontally
 # Query 1
 with st.expander("**QUERY 1:** Select count **States** by Frequency"):
@@ -96,3 +96,72 @@ with st.expander("**QUERY 10:** Select sum of **Investment** where **State** is 
                                    (df['Expiry'] <= '2021-01-16') & 
                                    (df['State'] == 'Uttar Pradesh')]['Investment'].sum()
     st.info(f"## ₹{sum_investment_date_range:,.2f}")
+
+
+with st.expander("**QUERY 11:** select Median of **Investment**  and **Rating** where **State** is Rajasthan, **Location** is Urban and **Investment** is greater than 400,000"):
+ query_1 = df[(df['State'] == 'Rajasthan') & (df['Location'] == 'Urban') & (df['Investment'] > 400000)][['Investment', 'Rating']].median()
+ st.success("Median of **Investment** and **Rating** where **State** is Rajasthan, **Location** is Urban, and **Investment** is greater than 400,000 USD:")
+ st.dataframe(query_1)
+
+# Query 12
+with st.expander("**QUERY 12:** Select median of **Investment** and **Rating** where **State** is Rajasthan, **Location** is Urban, **Investment** is greater than 400,000, and **Expiry** is a date range from 2-Jan-21 to 16-Jan-21"):
+    # Filter the DataFrame based on the conditions
+    filtered_data = df[
+        (df['State'] == 'Rajasthan') &
+        (df['Location'] == 'Urban') &
+        (df['Investment'] > 400000) &
+        (df['Expiry'] >= pd.Timestamp('2021-01-02')) &
+        (df['Expiry'] <= pd.Timestamp('2021-01-16'))
+    ]
+
+    # Calculate the median of 'Investment' and 'Rating'
+    median_values = filtered_data[['Investment', 'Rating']].median()
+
+    # Display the results
+    st.success("Median of Investment and Rating for the specified conditions:")
+    st.dataframe(median_values.to_frame(name="Median Value").reset_index())
+
+st.success("SELECT QUERY RESULTS IN TABULAR")
+
+# Query 12
+with st.expander('**QUERY 13:** Select all from **Location** where **Location** ="Tamil Nadu"'):
+ st.dataframe(df[df['State'] == "Tamil Nadu"],use_container_width=True)
+
+# Query 14
+with st.expander('**QUERY 14:** Select all from **Location** and **Region** where **Location** ="Tamil Nadu" and **Region**="East"'):
+ st.dataframe(df[(df['State'] == "Tamil Nadu") & (df['Region'] == "East")],use_container_width=True)
+
+# Query 15
+with st.expander('**QUERY 15:** Select all from **Location** and **Region** where **Location** ="Tamil Nadu" and **Region**="East" and **Investment** is greater than 300,000'):
+ st.dataframe(df[(df['State'] == "Tamil Nadu") & (df['Region'] == "East") & (df['Investment'] > 300000)],use_container_width=True)
+
+# Query 16
+with st.expander('**QUERY 16:** Select all  **investment** where **State**="Tamil Nadu" and **Location** is not "Urban"'):
+ st.dataframe(df.loc[(df['State'] == "Tamil Nadu") & (df['Location'] != "Urban"), 'Investment'],use_container_width=True)
+
+# Query 17
+with st.expander('**QUERY 17:** select at least 5 most frequent **Investment** where **Expiry** is a date range from 2-jan-21 to 16-jan-21'):
+ freq_investment_date_range = df[(df['Expiry'] >= '2021-01-02') & (df['Expiry'] <= '2021-01-16')]['Investment'].value_counts().nlargest(5).reset_index()
+ st.dataframe(freq_investment_date_range.rename(columns={'index': 'Investment', 'Investment': 'Count'}))
+
+# Query 18
+with st.expander('**QUERY 18:** Select all **investments** where **Expiry** is a date range from 2-Jan-21 to 16-Jan-21 and region is **Tamil Nadu**'):
+    filtered_data = df.loc[
+        (df['Expiry'] >= pd.Timestamp('2021-01-02')) &
+        (df['Expiry'] <= pd.Timestamp('2021-01-16')) &
+        (df['State'] == 'Tamil Nadu'),
+        ['Investment']
+    ]
+    st.dataframe(filtered_data, use_container_width=True)
+
+#Query 19
+with st.expander("**QUERY 19:** select **State**, **Region**, **Location** and  **BusinessType**  where **Region** is 'East'and **investment** greater than 2219900 and **BusinessType** is not  'Other' and **Construction** is Frame or FireResist and **State** is Karnataka or Tamil Nadu"):
+# Applying the specified conditions
+ query_result = df[
+    (df['Region'] == 'East') &
+    (df['Investment'] > 2219900) &
+    (df['BusinessType'] != 'Other') &
+    (df['Construction'].isin(['Frame', 'Fire Resist'])) &
+    (df['State'].isin(['Karnataka', 'Tamil Nadu']))
+ ][['State', 'Region', 'Location', 'BusinessType']]
+ st.dataframe(query_result,use_container_width=True)
